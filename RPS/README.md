@@ -4,6 +4,9 @@ Rock Paper Scissor
  
 ## Rock Paper Scissors (Pierre - Feuille - Ciseaux) ##
 
+Rock Paper Scissor
+ 
+Rock Paper Scissors (Pierre - Feuille - Ciseaux)
 Premier projet Python 
 Le but : recréer le classique Pierre - Feuille - Ciseaux contre l’ordinateur, en mode console.
 
@@ -69,7 +72,6 @@ Affiche un message de victoire lorsque le joueur gagne un round.
 Lose.py :
 Affiche un message de défaite lorsque le joueur perd un round.
 
-
 Lancer le jeu
 
 1 Ouvrir le terminal dans le dossier du projet.
@@ -92,5 +94,6 @@ Le programme affiche le résultat :
 Auteur :Jon Siong Théo Veret
 Étudiants en Bachelor Cybersécurité à Ynov Val d’Europe.
 Projet 1 en Python : Rock Paper Scissors
+
 
 

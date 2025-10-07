@@ -1,2 +1,2 @@
 def say_win():
-    print("✅ you win GG")
+    print("you win GG")

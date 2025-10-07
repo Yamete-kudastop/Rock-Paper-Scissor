@@ -13,7 +13,7 @@ def play_round():
 
     result = decide_winner(player, computer)
     if result == "tie":
-        print("➡️  Its a tie.")
+        print("Its a tie.")
     elif result == "win":
         say_win()
     else:

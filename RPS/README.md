@@ -45,6 +45,11 @@ Le programme affiche le résultat :
   Tu gagnes, tu perds, ou égalité 
  Le score s’actualise à chaque manche.
 
+ 14/10
+
+Ajout d'une interface graphique apres de nombreuses tentative nous avont reussis a avoir quelque chose 
+c'etais compliqué a plusieurs reprise mais nous somme quand meme parvenue a créer une interface graphique jouable il faut encore l'ameliorer mais c'est jouable.
+
 
  À propos
 

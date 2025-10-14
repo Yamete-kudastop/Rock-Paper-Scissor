@@ -1,208 +1,158 @@
-
 import os
-os.environ['TK_SILENCE_DEPRECATION'] = '1'  
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
-import tkinter as tk
-from tkinter import messagebox
+import pygame
 import random
+import sys
 
+pygame.init()
 
-window = tk.Tk()
-window.title("Rock Paper Scissors - Main Arena")
-window.geometry("560x460")
-window.config(bg="#0b0b0b")
-window.resizable(False, False)
+WIDTH, HEIGHT = 640, 480
+WIN = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Rock Paper Scissors - Arena")
+
+BG_COLOR = (30, 30, 40)
+TEXT_COLOR = (255, 255, 255)
+
+FONT = pygame.font.SysFont("arial", 24)
+BIG_FONT = pygame.font.SysFont("arial", 36, bold=True)
+
+choices = ["rock", "paper", "scissors"]
+images = {
+    "rock": pygame.image.load("rock.png"),
+    "paper": pygame.image.load("paper.png"),
+    "scissors": pygame.image.load("scissors.png")
+}
 
 player_score = 0
 computer_score = 0
 ties = 0
 round_count = 1
-MAX_ROUNDS = None  
+show_next_round = False
+player_choice_img = None
+computer_choice_img = None
+result_text = ""
 
+BUTTONS = []
 
-def get_winner(player, computer):
-    """Retourne 'player', 'computer' ou 'draw'."""
-    if player == computer:
-        return "draw"
-    if (player == "rock" and computer == "scissors") or \
-       (player == "paper" and computer == "rock") or \
-       (player == "scissors" and computer == "paper"):
-        return "player"
-    return "computer"
+class Button:
+    def __init__(self, x, y, w, h, text, color=(50, 50, 70)):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.text = text
+        self.color = color
 
-def show_popup(title, message):
-    """Affiche une popup informative (non bloquante après update)."""
-    window.update_idletasks()
-    messagebox.showinfo(title, message)
+    def draw(self, win):
+        pygame.draw.rect(win, self.color, self.rect)
+        label = FONT.render(self.text, True, TEXT_COLOR)
+        label_rect = label.get_rect(center=self.rect.center)
+        win.blit(label, label_rect)
 
-def player_choice(choice):
-    """Appelée quand le joueur choisit rock/paper/scissors."""
-    global player_score, computer_score, ties
+    def is_clicked(self, pos):
+        return self.rect.collidepoint(pos)
 
-    computer = random.choice(["rock", "paper", "scissors"])
+# Génération du fond dynamique
+BG_PARTICLES = [(random.randint(0, WIDTH), random.randint(0, HEIGHT)) for _ in range(200)]
+BG_VELOCITY = [(random.choice([-1,1])*0.2, random.choice([-1,1])*0.2) for _ in range(200)]
 
-    player_label.config(text=f"YOU: {choice.upper()}")
-    computer_label.config(text=f"COMPUTER: {computer.upper()}")
-    window.update_idletasks()  
+def draw_window():
+    WIN.fill(BG_COLOR)
 
-    winner = get_winner(choice, computer)
+    # Fond dynamique
+    for i, (x, y) in enumerate(BG_PARTICLES):
+        pygame.draw.circle(WIN, (50, 50, 70), (int(x), int(y)), 2)
+        # Déplacement
+        vx, vy = BG_VELOCITY[i]
+        x += vx
+        y += vy
+        if x < 0: x = WIDTH
+        if x > WIDTH: x = 0
+        if y < 0: y = HEIGHT
+        if y > HEIGHT: y = 0
+        BG_PARTICLES[i] = (x, y)
 
-    if winner == "player":
-        result_label.config(text=" YOU WIN! ", fg="#66ff66")
-        player_score += 1
-    elif winner == "computer":
-        result_label.config(text=" COMPUTER WINS! ", fg="#ff6666")
-        computer_score += 1
-    else:
-        result_label.config(text=" DRAW! ", fg="#ffd966")
+    round_label = BIG_FONT.render(f"Round {round_count}", True, TEXT_COLOR)
+    WIN.blit(round_label, (WIDTH//2 - round_label.get_width()//2, 20))
+
+    score_label = FONT.render(f"You: {player_score}  Computer: {computer_score}  Ties: {ties}", True, TEXT_COLOR)
+    WIN.blit(score_label, (WIDTH//2 - score_label.get_width()//2, 70))
+
+    if player_choice_img and computer_choice_img:
+        vs_label = BIG_FONT.render("VS", True, TEXT_COLOR)
+        WIN.blit(vs_label, (WIDTH//2 - vs_label.get_width()//2, HEIGHT//2 - vs_label.get_height()//2))
+        WIN.blit(player_choice_img, (WIDTH//4 - player_choice_img.get_width()//2, HEIGHT//2 - player_choice_img.get_height()//2))
+        WIN.blit(computer_choice_img, (3*WIDTH//4 - computer_choice_img.get_width()//2, HEIGHT//2 - computer_choice_img.get_height()//2))
+
+    if result_text:
+        result_label = BIG_FONT.render(result_text, True, TEXT_COLOR)
+        WIN.blit(result_label, (WIDTH//2 - result_label.get_width()//2, HEIGHT - 120))
+
+    for button in BUTTONS:
+        button.draw(WIN)
+
+    pygame.display.update()
+
+def play_round(player_choice_str):
+    global player_score, computer_score, ties, player_choice_img, computer_choice_img, result_text, show_next_round
+    computer_choice_str = random.choice(choices)
+    player_choice_img = pygame.transform.scale(images[player_choice_str], (100, 100))
+    computer_choice_img = pygame.transform.scale(images[computer_choice_str], (100, 100))
+
+    if player_choice_str == computer_choice_str:
+        result_text = "DRAW!"
         ties += 1
-
-    score_label.config(
-        text=f"Score: You {player_score} - {computer_score} Computer | Ties: {ties}"
-    )
-
-    set_choice_buttons_state("disabled")
-    next_round_btn.config(state="normal")
-
-    show_popup(
-        "Round result",
-        f"Ton choix : {choice.upper()}\nOrdinateur : {computer.upper()}\n\nRésultat : "
-        + ("TU GAGNES " if winner=="player" else "ORDINATEUR GAGNE " if winner=="computer" else "ÉGALITÉ ")
-    )
-
-def next_round():
-    """Prépare le round suivant."""
-    global round_count
-    round_count += 1
-    if MAX_ROUNDS is not None and round_count > MAX_ROUNDS:
-        end_game()
-        return
-
-    round_label.config(text=f"Round {round_count}")
-    player_label.config(text="YOU: ?")
-    computer_label.config(text="COMPUTER: ?")
-    result_label.config(text="Choose your move!", fg="white")
-    set_choice_buttons_state("normal")
-    next_round_btn.config(state="disabled")
-
-def reset_game():
-    """Remet tout à zéro."""
-    global player_score, computer_score, ties, round_count
-    player_score = 0
-    computer_score = 0
-    ties = 0
-    round_count = 1
-    round_label.config(text=f"Round {round_count}")
-    player_label.config(text="YOU: ?")
-    computer_label.config(text="COMPUTER: ?")
-    result_label.config(text="Choose your move!", fg="white")
-    score_label.config(text=f"Score: You {player_score} - {computer_score} Computer | Ties: {ties}")
-    set_choice_buttons_state("normal")
-    next_round_btn.config(state="disabled")
-
-def end_game():
-    """Affiche le résultat final et propose de reset."""
-    if player_score > computer_score:
-        final_msg = f"Tu as gagné !\nFinal score : You {player_score} - {computer_score} Computer | Ties: {ties}"
-    elif computer_score > player_score:
-        final_msg = f"L'ordinateur a gagné.\nFinal score : You {player_score} - {computer_score} Computer | Ties: {ties}"
+    elif (player_choice_str == "rock" and computer_choice_str == "scissors") or \
+         (player_choice_str == "paper" and computer_choice_str == "rock") or \
+         (player_choice_str == "scissors" and computer_choice_str == "paper"):
+        result_text = "YOU WIN!"
+        player_score += 1
     else:
-        final_msg = f"Match nul.\nFinal score : You {player_score} - {computer_score} Computer | Ties: {ties}"
-    show_popup("Game Over", final_msg)
-    set_choice_buttons_state("disabled")
-    next_round_btn.config(state="disabled")
+        result_text = "COMPUTER WINS!"
+        computer_score += 1
 
-def set_choice_buttons_state(state):
-    rock_btn.config(state=state)
-    paper_btn.config(state=state)
-    scissors_btn.config(state=state)
+    show_next_round = True
 
+def next_round_func():
+    global round_count, player_choice_img, computer_choice_img, result_text, show_next_round
+    round_count += 1
+    player_choice_img = None
+    computer_choice_img = None
+    result_text = ""
+    show_next_round = False
 
-title_label = tk.Label(window, text="ROCK PAPER SCISSORS", font=("Helvetica", 20, "bold"),
-                       fg="white", bg="#0b0b0b")
-title_label.pack(pady=(12, 6))
+def main():
+    global BUTTONS
+    clock = pygame.time.Clock()
+    run = True
 
-round_label = tk.Label(window, text=f"Round {round_count}", font=("Helvetica", 14),
-                       fg="#ffd700", bg="#0b0b0b")
-round_label.pack()
+    BUTTONS = [
+        Button(50, HEIGHT - 60, 120, 40, "Rock"),
+        Button(200, HEIGHT - 60, 120, 40, "Paper"),
+        Button(350, HEIGHT - 60, 120, 40, "Scissors"),
+        Button(500, HEIGHT - 60, 120, 40, "Next Round")
+    ]
 
-choices_frame = tk.Frame(window, bg="#0b0b0b")
-choices_frame.pack(pady=18)
+    while run:
+        clock.tick(60)
+        draw_window()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+                break
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = pygame.mouse.get_pos()
+                for i, button in enumerate(BUTTONS):
+                    if button.is_clicked((mx, my)):
+                        if i == 0 and not show_next_round:
+                            play_round("rock")
+                        elif i == 1 and not show_next_round:
+                            play_round("paper")
+                        elif i == 2 and not show_next_round:
+                            play_round("scissors")
+                        elif i == 3 and show_next_round:
+                            next_round_func()
 
-player_label = tk.Label(choices_frame, text="YOU: ?", font=("Helvetica", 16, "bold"),
-                        fg="#80ff80", bg="#0b0b0b")
-player_label.grid(row=0, column=0, padx=24)
-
-vs_label = tk.Label(choices_frame, text="VS", font=("Helvetica", 14), fg="white", bg="#0b0b0b")
-vs_label.grid(row=0, column=1, padx=12)
-
-computer_label = tk.Label(choices_frame, text="COMPUTER: ?", font=("Helvetica", 16, "bold"),
-                          fg="#ff8080", bg="#0b0b0b")
-computer_label.grid(row=0, column=2, padx=24)
-
-result_label = tk.Label(window, text="Choose your move!", font=("Helvetica", 16, "bold"),
-                        fg="white", bg="#0b0b0b")
-result_label.pack(pady=12)
-
-score_label = tk.Label(window, text=f"Score: You {player_score} - {computer_score} Computer | Ties: {ties}",
-                       font=("Helvetica", 12), fg="#66ffff", bg="#0b0b0b")
-score_label.pack()
-
-buttons_frame = tk.Frame(window, bg="#0b0b0b")
-buttons_frame.pack(pady=22)
-
-rock_btn = tk.Button(buttons_frame, text="ROCK", font=("Helvetica", 13, "bold"),
-                     width=10, height=2, bg="#2f2f2f", fg="white",
-                     command=lambda: player_choice("rock"))
-rock_btn.pack(side="left", padx=10)
-
-paper_btn = tk.Button(buttons_frame, text="PAPER", font=("Helvetica", 13, "bold"),
-                      width=10, height=2, bg="#2f2f2f", fg="white",
-                      command=lambda: player_choice("paper"))
-paper_btn.pack(side="left", padx=10)
-
-scissors_btn = tk.Button(buttons_frame, text="SCISSORS", font=("Helvetica", 13, "bold"),
-                         width=10, height=2, bg="#2f2f2f", fg="white",
-                         command=lambda: player_choice("scissors"))
-scissors_btn.pack(side="left", padx=10)
-
-controls_frame = tk.Frame(window, bg="#0b0b0b")
-controls_frame.pack(pady=12)
-
-next_round_btn = tk.Button(controls_frame, text="NEXT ROUND", font=("Helvetica", 11, "bold"),
-                           width=12, height=1, bg="#1e90ff", fg="white", state="disabled",
-                           command=next_round)
-next_round_btn.grid(row=0, column=0, padx=8)
-
-reset_btn = tk.Button(controls_frame, text="RESET", font=("Helvetica", 11, "bold"),
-                      width=10, height=1, bg="#ff8c00", fg="white", command=reset_game)
-reset_btn.grid(row=0, column=1, padx=8)
-
-quit_btn = tk.Button(controls_frame, text="QUIT", font=("Helvetica", 11),
-                     width=10, height=1, bg="#b22222", fg="white", command=window.destroy)
-quit_btn.grid(row=0, column=2, padx=8)
-
-
-def on_keypress(event):
-    key = event.keysym.lower()
-    if key == "r":
-        if rock_btn['state'] == "normal":
-            player_choice("rock")
-    elif key == "p":
-        if paper_btn['state'] == "normal":
-            player_choice("paper")
-    elif key == "s":
-        if scissors_btn['state'] == "normal":
-            player_choice("scissors")
-    elif key == "n":
-        if next_round_btn['state'] == "normal":
-            next_round()
-    elif key == "t":  
-        reset_game()
-
-window.bind("<Key>", on_keypress)
-
+    pygame.quit()
+    sys.exit()
 
 if __name__ == "__main__":
-    window.focus_force()
-    window.mainloop()
+    main()
